@@ -263,6 +263,67 @@
         background: var(--brand-dark);
       }
 
+      button.secondary {
+        background: #eef3f4;
+        color: var(--brand-dark);
+      }
+
+      button.secondary:hover {
+        background: #dce8ea;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .selected-list {
+        align-content: flex-start;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        color: var(--muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 184px;
+        padding: 10px;
+      }
+
+      .comparison-chip {
+        align-items: center;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--text);
+        display: inline-flex;
+        gap: 8px;
+        height: fit-content;
+        max-width: 100%;
+        padding: 7px 8px 7px 12px;
+      }
+
+      .comparison-chip span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .comparison-chip button {
+        border-radius: 999px;
+        font-size: 0.85rem;
+        line-height: 1;
+        min-height: 24px;
+        padding: 3px 8px;
+      }
+
       @media (max-width: 860px) {
         .controls {
           grid-template-columns: 1fr;
@@ -300,13 +361,28 @@
         </div>
 
         <div class="controls">
+          <div class="span-2">
+            <label for="primary">Primary Rider</label>
+            <select id="primary" disabled></select>
+            <div class="hint">The primary rider stays locked while you browse categories.</div>
+          </div>
+
           <div>
-            <label for="category">Category</label>
+            <label for="category">Browse Category</label>
             <select id="category" disabled></select>
           </div>
 
           <div>
-            <label for="search">Filter Riders</label>
+            <label for="sort">Sort Riders</label>
+            <select id="sort" disabled>
+              <option value="race">Race Result Order</option>
+              <option value="bib">Bib Number</option>
+              <option value="name">Name</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="search">Search Riders</label>
             <input id="search" type="search" placeholder="Name, bib, city, club" disabled />
           </div>
 
@@ -325,14 +401,20 @@
           </div>
 
           <div class="span-2">
-            <label for="primary">Primary Rider</label>
-            <select id="primary" disabled></select>
+            <label for="compare">Add Comparison Riders</label>
+            <select id="compare" multiple disabled></select>
+            <div class="hint">Filter and sort this list, then add riders. Existing comparisons stay locked.</div>
+            <div class="button-row">
+              <button type="button" id="add-comparisons" disabled>Add Selected Riders</button>
+              <button type="button" id="clear-comparisons" class="secondary" disabled>Clear Comparisons</button>
+            </div>
           </div>
 
           <div class="span-2">
-            <label for="compare">Riders To Compare</label>
-            <select id="compare" multiple disabled></select>
-            <div class="hint">Hold Command or Shift to select multiple riders.</div>
+            <label>Selected Comparison Riders</label>
+            <div id="selected-comparisons" class="selected-list">
+              No comparison riders selected yet.
+            </div>
           </div>
         </div>
 
@@ -358,15 +440,21 @@
 
       let allRows = [];
       let visibleRows = [];
+      let primaryId = "";
+      let selectedComparisonIds = [];
 
       const el = {
         status: document.querySelector("#status"),
         error: document.querySelector("#error"),
         reload: document.querySelector("#reload"),
         category: document.querySelector("#category"),
+        sort: document.querySelector("#sort"),
         search: document.querySelector("#search"),
         primary: document.querySelector("#primary"),
         compare: document.querySelector("#compare"),
+        addComparisons: document.querySelector("#add-comparisons"),
+        clearComparisons: document.querySelector("#clear-comparisons"),
+        selectedComparisons: document.querySelector("#selected-comparisons"),
         results: document.querySelector("#results"),
         difference: () => document.querySelector('input[name="difference"]:checked').value,
       };
@@ -460,6 +548,7 @@
 
               const ageGender = String(value(item, "AgeSex")).split(/\s+/).filter(Boolean);
               const row = {
+                raceOrder: rows.length,
                 rank: value(item, 'If([CategoryRank]>0;[CategoryRank];"")'),
                 name,
                 bib: bib || value(item, "BIB"),
@@ -487,6 +576,7 @@
                 row.city,
                 row.club,
               ].join(" ").toLowerCase();
+              row.id = makeRowId(row);
               rows.push(row);
             }
             return;
@@ -505,6 +595,7 @@
 
       function normalizeSnapshotRow(row) {
         const normalized = {
+          raceOrder: Number(row.raceOrder) || 0,
           rank: row.rank || "",
           name: row.name || "",
           bib: row.bib || "",
@@ -532,7 +623,12 @@
           normalized.city,
           normalized.club,
         ].join(" ").toLowerCase();
+        normalized.id = makeRowId(normalized);
         return normalized;
+      }
+
+      function makeRowId(row) {
+        return `${row.bib}|${row.name}|${row.category}`;
       }
 
       async function fetchJson(url, params = {}) {
@@ -628,7 +724,15 @@
       }
 
       function setEnabled(enabled) {
-        for (const control of [el.category, el.search, el.primary, el.compare]) {
+        for (const control of [
+          el.category,
+          el.sort,
+          el.search,
+          el.primary,
+          el.compare,
+          el.addComparisons,
+          el.clearComparisons,
+        ]) {
           control.disabled = !enabled;
         }
       }
@@ -647,69 +751,132 @@
       function hydrateControls() {
         const categories = ["All categories", ...new Set(allRows.map((row) => row.category).sort())];
         el.category.replaceChildren(...categories.map((category) => option(category)));
+        el.primary.replaceChildren(...sortRows(allRows, "name").map((row) => option(riderLabel(row), row.id)));
+        primaryId = primaryId && allRows.some((row) => row.id === primaryId)
+          ? primaryId
+          : allRows[0]?.id || "";
+        el.primary.value = primaryId;
+        selectedComparisonIds = selectedComparisonIds.filter((id) => {
+          return id !== primaryId && allRows.some((row) => row.id === id);
+        });
         el.search.value = "";
-        updateRiderOptions();
+        updateBrowseOptions();
+        renderSelectedComparisons();
       }
 
       function getFilteredRows() {
         const category = el.category.value;
         const term = el.search.value.trim().toLowerCase();
-        return allRows.filter((row) => {
+        return sortRows(allRows.filter((row) => {
           const categoryMatch = category === "All categories" || row.category === category;
           const termMatch = !term || row.searchText.includes(term);
           return categoryMatch && termMatch;
-        });
+        }), el.sort.value);
       }
 
-      function updateRiderOptions() {
-        const previousPrimary = el.primary.value;
-        const previousCompare = new Set([...el.compare.selectedOptions].map((node) => node.value));
+      function sortRows(rows, sortType) {
+        const sorted = [...rows];
+        if (sortType === "bib") {
+          sorted.sort((a, b) => {
+            const bibA = Number.parseInt(a.bib, 10);
+            const bibB = Number.parseInt(b.bib, 10);
+            if (!Number.isNaN(bibA) && !Number.isNaN(bibB) && bibA !== bibB) {
+              return bibA - bibB;
+            }
+            return a.bib.localeCompare(b.bib, undefined, { numeric: true });
+          });
+        } else if (sortType === "name") {
+          sorted.sort((a, b) => a.name.localeCompare(b.name));
+        } else {
+          sorted.sort((a, b) => a.raceOrder - b.raceOrder);
+        }
+        return sorted;
+      }
+
+      function updateBrowseOptions() {
         visibleRows = getFilteredRows();
 
-        el.primary.replaceChildren(...visibleRows.map((row, index) => option(riderLabel(row), String(index))));
-        if (visibleRows.some((_, index) => String(index) === previousPrimary)) {
-          el.primary.value = previousPrimary;
-        }
-
-        updateCompareOptions(previousCompare);
-      }
-
-      function updateCompareOptions(previousCompare = new Set()) {
-        const primaryIndex = Number(el.primary.value || 0);
         const options = visibleRows
-          .map((row, index) => ({ row, index }))
-          .filter(({ index }) => index !== primaryIndex)
-          .map(({ row, index }) => {
-            const node = option(riderLabel(row), String(index));
-            node.selected = previousCompare.has(String(index));
-            return node;
-          });
+          .filter((row) => row.id !== primaryId && !selectedComparisonIds.includes(row.id))
+          .map((row) => option(riderLabel(row), row.id));
 
         el.compare.replaceChildren(...options);
-        limitComparisons();
+        el.addComparisons.disabled = !allRows.length || selectedComparisonIds.length >= MAX_COMPARISONS;
+        el.clearComparisons.disabled = !selectedComparisonIds.length;
       }
 
-      function limitComparisons() {
-        const selected = [...el.compare.selectedOptions];
-        if (selected.length <= MAX_COMPARISONS) return;
-        selected.slice(MAX_COMPARISONS).forEach((node) => {
-          node.selected = false;
-        });
-        showError(`Showing the first ${MAX_COMPARISONS} selected riders. Deselect one to compare someone else.`);
+      function addSelectedComparisons() {
+        const incomingIds = [...el.compare.selectedOptions].map((node) => node.value);
+        let skipped = 0;
+        for (const id of incomingIds) {
+          if (
+            id === primaryId ||
+            selectedComparisonIds.includes(id) ||
+            selectedComparisonIds.length >= MAX_COMPARISONS
+          ) {
+            skipped += 1;
+            continue;
+          }
+          selectedComparisonIds.push(id);
+        }
+        if (skipped || incomingIds.length > MAX_COMPARISONS) {
+          showError(`You can compare up to ${MAX_COMPARISONS} riders at once.`);
+        } else {
+          el.error.hidden = true;
+        }
+        updateBrowseOptions();
+        renderSelectedComparisons();
+        render();
       }
 
-      function render() {
-        if (!visibleRows.length) {
-          el.results.innerHTML = "<p class=\"hint\" style=\"padding: 18px;\">No riders match the current filters.</p>";
+      function removeComparison(id) {
+        selectedComparisonIds = selectedComparisonIds.filter((selectedId) => selectedId !== id);
+        updateBrowseOptions();
+        renderSelectedComparisons();
+        render();
+      }
+
+      function clearComparisons() {
+        selectedComparisonIds = [];
+        updateBrowseOptions();
+        renderSelectedComparisons();
+        render();
+      }
+
+      function renderSelectedComparisons() {
+        if (!selectedComparisonIds.length) {
+          el.selectedComparisons.textContent = "No comparison riders selected yet.";
           return;
         }
 
-        const primary = visibleRows[Number(el.primary.value || 0)];
-        const selectedIndexes = [...el.compare.selectedOptions].map((node) => Number(node.value));
-        const comparisonRows = selectedIndexes.map((index) => visibleRows[index]).filter(Boolean);
+        const chips = selectedComparisonIds.map((id) => {
+          const row = getRowById(id);
+          if (!row) return "";
+          return `
+            <div class="comparison-chip">
+              <span>${escapeHtml(riderLabel(row))}</span>
+              <button type="button" class="secondary" data-remove-id="${escapeHtml(id)}">Remove</button>
+            </div>
+          `;
+        });
+        el.selectedComparisons.innerHTML = chips.join("");
+      }
+
+      function getRowById(id) {
+        return allRows.find((row) => row.id === id);
+      }
+
+      function render() {
+        if (!allRows.length) {
+          el.results.innerHTML = "<p class=\"hint\" style=\"padding: 18px;\">No riders loaded yet.</p>";
+          return;
+        }
+
+        const primary = getRowById(primaryId);
+        const comparisonRows = selectedComparisonIds.map((id) => getRowById(id)).filter(Boolean);
 
         if (!primary || !comparisonRows.length) {
-          el.results.innerHTML = "<p class=\"hint\" style=\"padding: 18px;\">Choose a primary rider and at least one rider to compare.</p>";
+          el.results.innerHTML = "<p class=\"hint\" style=\"padding: 18px;\">Lock a primary rider, then add one or more comparison riders from any category.</p>";
           return;
         }
 
@@ -762,20 +929,26 @@
 
       el.reload.addEventListener("click", loadResults);
       el.category.addEventListener("change", () => {
-        updateRiderOptions();
-        render();
+        updateBrowseOptions();
       });
       el.search.addEventListener("input", () => {
-        updateRiderOptions();
-        render();
+        updateBrowseOptions();
+      });
+      el.sort.addEventListener("change", () => {
+        updateBrowseOptions();
       });
       el.primary.addEventListener("change", () => {
-        updateCompareOptions();
+        primaryId = el.primary.value;
+        selectedComparisonIds = selectedComparisonIds.filter((id) => id !== primaryId);
+        updateBrowseOptions();
+        renderSelectedComparisons();
         render();
       });
-      el.compare.addEventListener("change", () => {
-        limitComparisons();
-        render();
+      el.addComparisons.addEventListener("click", addSelectedComparisons);
+      el.clearComparisons.addEventListener("click", clearComparisons);
+      el.selectedComparisons.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-remove-id]");
+        if (button) removeComparison(button.dataset.removeId);
       });
       document.querySelectorAll('input[name="difference"]').forEach((node) => {
         node.addEventListener("change", render);
