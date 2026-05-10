@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Marinduro 2026 Results Comparison</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f8fb;
+        --card: #ffffff;
+        --text: #172033;
+        --muted: #637083;
+        --border: #d9e0ea;
+        --brand: #448188;
+        --brand-dark: #2f6268;
+        --good: #0b7a30;
+        --bad: #b42318;
+        --shadow: 0 18px 45px rgba(23, 32, 51, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.45;
+      }
+
+      a {
+        color: var(--brand-dark);
+      }
+
+      header {
+        background:
+          linear-gradient(120deg, rgba(68, 129, 136, 0.94), rgba(47, 98, 104, 0.94)),
+          radial-gradient(circle at top left, rgba(255, 255, 255, 0.2), transparent 38%);
+        color: white;
+        padding: 42px max(20px, calc((100vw - 1180px) / 2)) 34px;
+      }
+
+      header p,
+      header h1 {
+        margin: 0;
+      }
+
+      header h1 {
+        font-size: clamp(2rem, 5vw, 4rem);
+        letter-spacing: -0.05em;
+      }
+
+      header p {
+        max-width: 760px;
+        margin-top: 12px;
+        color: rgba(255, 255, 255, 0.86);
+      }
+
+      main {
+        max-width: 1180px;
+        margin: -24px auto 48px;
+        padding: 0 20px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        box-shadow: var(--shadow);
+        padding: 22px;
+      }
+
+      .status {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+
+      .status-text {
+        color: var(--muted);
+        font-size: 0.94rem;
+      }
+
+      .status-text strong {
+        color: var(--text);
+      }
+
+      .controls {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      label {
+        color: var(--muted);
+        display: block;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+
+      select,
+      input[type="search"] {
+        appearance: none;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        color: var(--text);
+        font: inherit;
+        min-height: 44px;
+        padding: 10px 12px;
+        width: 100%;
+      }
+
+      select[multiple] {
+        min-height: 184px;
+      }
+
+      .span-2 {
+        grid-column: span 2;
+      }
+
+      .radio-row {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 16px;
+        min-height: 44px;
+      }
+
+      .radio-row label {
+        align-items: center;
+        color: var(--text);
+        display: inline-flex;
+        font-size: 0.95rem;
+        font-weight: 500;
+        gap: 6px;
+        letter-spacing: 0;
+        margin: 0;
+        text-transform: none;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 0.88rem;
+        margin-top: 8px;
+      }
+
+      .table-card {
+        margin-top: 22px;
+        overflow: hidden;
+        padding: 0;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        border-collapse: collapse;
+        min-width: 900px;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--border);
+        padding: 14px 13px;
+        text-align: right;
+        vertical-align: top;
+        white-space: nowrap;
+      }
+
+      th:first-child,
+      td:first-child {
+        left: 0;
+        max-width: 360px;
+        position: sticky;
+        text-align: left;
+        white-space: normal;
+        z-index: 1;
+      }
+
+      th:first-child {
+        background: #edf6f7;
+      }
+
+      td:first-child {
+        background: white;
+      }
+
+      th {
+        background: #edf6f7;
+        color: #31444f;
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .rider-name {
+        font-weight: 750;
+      }
+
+      .rider-meta,
+      .cell-delta {
+        color: var(--muted);
+        display: block;
+        font-size: 0.84rem;
+        margin-top: 3px;
+      }
+
+      .delta-good {
+        color: var(--good);
+        font-weight: 700;
+      }
+
+      .delta-bad {
+        color: var(--bad);
+        font-weight: 700;
+      }
+
+      .baseline {
+        color: var(--brand-dark);
+        font-weight: 700;
+      }
+
+      .error {
+        background: #fff2f0;
+        border: 1px solid #ffd1cc;
+        border-radius: 14px;
+        color: #8a1f12;
+        margin-top: 16px;
+        padding: 14px;
+      }
+
+      button {
+        background: var(--brand);
+        border: 0;
+        border-radius: 12px;
+        color: white;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 700;
+        min-height: 44px;
+        padding: 10px 16px;
+      }
+
+      button:hover {
+        background: var(--brand-dark);
+      }
+
+      @media (max-width: 860px) {
+        .controls {
+          grid-template-columns: 1fr;
+        }
+
+        .span-2 {
+          grid-column: span 1;
+        }
+
+        main {
+          padding: 0 12px;
+        }
+
+        .card {
+          border-radius: 16px;
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Marinduro 2026 Results Comparison</h1>
+      <p>
+        Loads the current Pro and Expert race results from Race Result and compares
+        any rider against up to ten others across all six stages.
+      </p>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="status">
+          <div class="status-text" id="status">Loading 2026 results...</div>
+          <button type="button" id="reload">Reload Results</button>
+        </div>
+
+        <div class="controls">
+          <div>
+            <label for="category">Category</label>
+            <select id="category" disabled></select>
+          </div>
+
+          <div>
+            <label for="search">Filter Riders</label>
+            <input id="search" type="search" placeholder="Name, bib, city, club" disabled />
+          </div>
+
+          <div class="span-2">
+            <label>Difference Type</label>
+            <div class="radio-row">
+              <label>
+                <input type="radio" name="difference" value="time" checked />
+                Time Difference
+              </label>
+              <label>
+                <input type="radio" name="difference" value="percent" />
+                Percentage Difference
+              </label>
+            </div>
+          </div>
+
+          <div class="span-2">
+            <label for="primary">Primary Rider</label>
+            <select id="primary" disabled></select>
+          </div>
+
+          <div class="span-2">
+            <label for="compare">Riders To Compare</label>
+            <select id="compare" multiple disabled></select>
+            <div class="hint">Hold Command or Shift to select multiple riders.</div>
+          </div>
+        </div>
+
+        <div id="error" class="error" hidden></div>
+      </section>
+
+      <section class="card table-card">
+        <div class="table-wrap" id="results"></div>
+      </section>
+    </main>
+
+    <script>
+      const EVENT_ID = "395892";
+      const RESULTS_PAGE = "results";
+      const RESULTS_LIST_ID = "933E75";
+      const RESULTS_LIST_NAME = "Online|Pro Race";
+      const SOURCE_URL = `https://my.raceresult.com/${EVENT_ID}/results#0_${RESULTS_LIST_ID}`;
+      const API_ROOT = `https://my.raceresult.com/${EVENT_ID}/${RESULTS_PAGE}`;
+      const STAGES = ["Stage1", "Stage2", "Stage3", "Stage4", "Stage5", "Stage6"];
+      const CACHE_KEY = "marinduro-2026-pro-race-results-v1";
+      const SNAPSHOT_URL = "results-2026-pro-race.snapshot.json";
+      const MAX_COMPARISONS = 10;
+
+      let allRows = [];
+      let visibleRows = [];
+
+      const el = {
+        status: document.querySelector("#status"),
+        error: document.querySelector("#error"),
+        reload: document.querySelector("#reload"),
+        category: document.querySelector("#category"),
+        search: document.querySelector("#search"),
+        primary: document.querySelector("#primary"),
+        compare: document.querySelector("#compare"),
+        results: document.querySelector("#results"),
+        difference: () => document.querySelector('input[name="difference"]:checked').value,
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[char]);
+      }
+
+      function parseTime(value) {
+        const match = String(value ?? "").match(/[+-]?\d+(?::\d+){1,2}(?:\.\d+)?/);
+        if (!match) return null;
+
+        const raw = match[0];
+        const sign = raw.startsWith("-") ? -1 : 1;
+        const parts = raw.replace(/^[+-]/, "").split(":").map(Number);
+        const seconds = parts.pop() ?? 0;
+        const minutes = parts.pop() ?? 0;
+        const hours = parts.pop() ?? 0;
+        return sign * (hours * 3600 + minutes * 60 + seconds);
+      }
+
+      function formatDuration(value) {
+        if (value == null || Number.isNaN(value)) return "n/a";
+
+        let seconds = Math.abs(value);
+        let wholeSeconds = Math.floor(seconds);
+        let hundredths = Math.round((seconds - wholeSeconds) * 100);
+        if (hundredths === 100) {
+          wholeSeconds += 1;
+          hundredths = 0;
+        }
+
+        const hours = Math.floor(wholeSeconds / 3600);
+        const minutes = Math.floor((wholeSeconds % 3600) / 60);
+        const secs = wholeSeconds % 60;
+        const fraction = hundredths ? `.${String(hundredths).padStart(2, "0")}` : "";
+
+        if (hours) return `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}${fraction}`;
+        return `${minutes}:${String(secs).padStart(2, "0")}${fraction}`;
+      }
+
+      function formatDelta(delta, baseline) {
+        if (delta == null || baseline == null || baseline === 0) return "n/a";
+        const sign = delta > 0 ? "+" : delta < 0 ? "-" : "";
+        if (el.difference() === "percent") {
+          return `${sign}${(Math.abs(delta) / baseline * 100).toFixed(2)}%`;
+        }
+        return `${sign}${formatDuration(delta)}`;
+      }
+
+      function cleanGroupName(groupName) {
+        return String(groupName).replace(/^#\d+_/, "").trim() || "Results";
+      }
+
+      function parseNameBib(nameBib) {
+        const match = String(nameBib ?? "").trim().match(/^(.*?)\s+\(([^()]*)\)$/);
+        if (!match) return { name: String(nameBib ?? "").trim(), bib: "" };
+        return { name: match[1].trim(), bib: match[2].trim() };
+      }
+
+      function normalizeRows(payload) {
+        if (payload.rows?.length) {
+          return payload.rows.map((row) => normalizeSnapshotRow(row));
+        }
+
+        const fields = payload.DataFields || [];
+        const fieldIndex = new Map(fields.map((field, index) => [field, index]));
+        const rows = [];
+
+        function value(item, field) {
+          const index = fieldIndex.get(field);
+          return index == null ? "" : item[index] ?? "";
+        }
+
+        function walk(data, category = "Results") {
+          if (Array.isArray(data)) {
+            for (const item of data) {
+              if (!Array.isArray(item)) {
+                walk(item, category);
+                continue;
+              }
+
+              const { name, bib } = parseNameBib(value(item, "NameBib"));
+              if (!name) continue;
+
+              const ageGender = String(value(item, "AgeSex")).split(/\s+/).filter(Boolean);
+              const row = {
+                rank: value(item, 'If([CategoryRank]>0;[CategoryRank];"")'),
+                name,
+                bib: bib || value(item, "BIB"),
+                age: ageGender[0] || "",
+                gender: ageGender[1] || "",
+                category,
+                city: value(item, "CityState"),
+                club: value(item, "CLUB"),
+                total: value(item, "WithStatus([FinishTime])"),
+              };
+
+              STAGES.forEach((stage, stageIndex) => {
+                row[stage] = value(item, `RATimeStage${stageIndex + 1}`);
+                row[`${stage}Seconds`] = parseTime(row[stage]);
+              });
+              row.totalSeconds = parseTime(row.total);
+              row.overallSeconds = row.totalSeconds ?? STAGES.reduce((sum, stage) => {
+                const seconds = row[`${stage}Seconds`];
+                return seconds == null ? sum : sum + seconds;
+              }, 0);
+              row.searchText = [
+                row.name,
+                row.bib,
+                row.category,
+                row.city,
+                row.club,
+              ].join(" ").toLowerCase();
+              rows.push(row);
+            }
+            return;
+          }
+
+          if (data && typeof data === "object") {
+            for (const [group, child] of Object.entries(data)) {
+              walk(child, cleanGroupName(group));
+            }
+          }
+        }
+
+        walk(payload.data || []);
+        return rows;
+      }
+
+      function normalizeSnapshotRow(row) {
+        const normalized = {
+          rank: row.rank || "",
+          name: row.name || "",
+          bib: row.bib || "",
+          age: row.age || "",
+          gender: row.gender || "",
+          category: row.category || "Results",
+          city: row.city || "",
+          club: row.club || "",
+          total: row.total || "",
+        };
+        STAGES.forEach((stage) => {
+          const key = stage.toLowerCase();
+          normalized[stage] = row[key] || row[stage] || "";
+          normalized[`${stage}Seconds`] = parseTime(normalized[stage]);
+        });
+        normalized.totalSeconds = parseTime(normalized.total);
+        normalized.overallSeconds = normalized.totalSeconds ?? STAGES.reduce((sum, stage) => {
+          const seconds = normalized[`${stage}Seconds`];
+          return seconds == null ? sum : sum + seconds;
+        }, 0);
+        normalized.searchText = [
+          normalized.name,
+          normalized.bib,
+          normalized.category,
+          normalized.city,
+          normalized.club,
+        ].join(" ").toLowerCase();
+        return normalized;
+      }
+
+      async function fetchJson(url, params = {}) {
+        const requestUrl = new URL(url);
+        for (const [key, value] of Object.entries(params)) {
+          requestUrl.searchParams.set(key, value);
+        }
+
+        const response = await fetch(requestUrl, { headers: { Accept: "application/json" } });
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        return response.json();
+      }
+
+      async function loadResults() {
+        el.error.hidden = true;
+        setEnabled(false);
+        el.status.textContent = "Loading 2026 results...";
+
+        try {
+          const config = await fetchJson(`${API_ROOT}/config`);
+          const resultList = (config.TabConfig?.Lists || []).find(
+            (item) => item.ID === RESULTS_LIST_ID || item.Name === RESULTS_LIST_NAME,
+          );
+
+          if (!resultList) throw new Error("Could not find the Pro Race result list.");
+
+          const payload = await fetchJson(`${API_ROOT}/list`, {
+            key: config.key,
+            listname: resultList.Name,
+            page: RESULTS_PAGE,
+            contest: resultList.Contest || "0",
+            r: "all",
+            l: resultList.Leader || 0,
+            openedGroups: "{}",
+          });
+
+          allRows = normalizeRows(payload);
+          if (!allRows.length) throw new Error("No rider rows were returned.");
+
+          localStorage.setItem(CACHE_KEY, JSON.stringify({
+            savedAt: new Date().toISOString(),
+            rows: allRows,
+          }));
+
+          el.status.innerHTML = `<strong>${allRows.length}</strong> riders loaded from <a href="${SOURCE_URL}">Race Result</a>.`;
+          hydrateControls();
+          render();
+        } catch (error) {
+          const cached = getCachedRows();
+          if (cached) {
+            allRows = cached.rows;
+            el.status.innerHTML = `<strong>${allRows.length}</strong> cached riders loaded from ${new Date(cached.savedAt).toLocaleString()}.`;
+            showError(`Live results could not be loaded (${error.message}). Showing the last cached copy from this browser.`);
+            hydrateControls();
+            render();
+          } else {
+            await loadSnapshot(error);
+          }
+        } finally {
+          setEnabled(Boolean(allRows.length));
+        }
+      }
+
+      async function loadSnapshot(liveError) {
+        try {
+          const snapshot = await fetchJson(SNAPSHOT_URL);
+          allRows = normalizeRows(snapshot);
+          if (!allRows.length) throw new Error("Snapshot has no rider rows.");
+          el.status.innerHTML = `<strong>${allRows.length}</strong> riders loaded from the bundled 2026 snapshot.`;
+          showError(`Live results could not be loaded (${liveError.message}). Showing the bundled snapshot instead.`);
+          hydrateControls();
+          render();
+        } catch (snapshotError) {
+          showError(`Could not load live results from Race Result (${liveError.message}) or the bundled snapshot (${snapshotError.message}).`);
+          el.status.textContent = "Results failed to load.";
+          el.results.innerHTML = "";
+        }
+      }
+
+      function getCachedRows() {
+        try {
+          const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
+          if (cached?.rows?.length) return cached;
+        } catch {
+          localStorage.removeItem(CACHE_KEY);
+        }
+        return null;
+      }
+
+      function showError(message) {
+        el.error.textContent = message;
+        el.error.hidden = false;
+      }
+
+      function setEnabled(enabled) {
+        for (const control of [el.category, el.search, el.primary, el.compare]) {
+          control.disabled = !enabled;
+        }
+      }
+
+      function option(label, value = label) {
+        const node = document.createElement("option");
+        node.value = value;
+        node.textContent = label;
+        return node;
+      }
+
+      function riderLabel(row) {
+        return `${row.name} (${row.bib}) - ${row.category}`;
+      }
+
+      function hydrateControls() {
+        const categories = ["All categories", ...new Set(allRows.map((row) => row.category).sort())];
+        el.category.replaceChildren(...categories.map((category) => option(category)));
+        el.search.value = "";
+        updateRiderOptions();
+      }
+
+      function getFilteredRows() {
+        const category = el.category.value;
+        const term = el.search.value.trim().toLowerCase();
+        return allRows.filter((row) => {
+          const categoryMatch = category === "All categories" || row.category === category;
+          const termMatch = !term || row.searchText.includes(term);
+          return categoryMatch && termMatch;
+        });
+      }
+
+      function updateRiderOptions() {
+        const previousPrimary = el.primary.value;
+        const previousCompare = new Set([...el.compare.selectedOptions].map((node) => node.value));
+        visibleRows = getFilteredRows();
+
+        el.primary.replaceChildren(...visibleRows.map((row, index) => option(riderLabel(row), String(index))));
+        if (visibleRows.some((_, index) => String(index) === previousPrimary)) {
+          el.primary.value = previousPrimary;
+        }
+
+        updateCompareOptions(previousCompare);
+      }
+
+      function updateCompareOptions(previousCompare = new Set()) {
+        const primaryIndex = Number(el.primary.value || 0);
+        const options = visibleRows
+          .map((row, index) => ({ row, index }))
+          .filter(({ index }) => index !== primaryIndex)
+          .map(({ row, index }) => {
+            const node = option(riderLabel(row), String(index));
+            node.selected = previousCompare.has(String(index));
+            return node;
+          });
+
+        el.compare.replaceChildren(...options);
+        limitComparisons();
+      }
+
+      function limitComparisons() {
+        const selected = [...el.compare.selectedOptions];
+        if (selected.length <= MAX_COMPARISONS) return;
+        selected.slice(MAX_COMPARISONS).forEach((node) => {
+          node.selected = false;
+        });
+        showError(`Showing the first ${MAX_COMPARISONS} selected riders. Deselect one to compare someone else.`);
+      }
+
+      function render() {
+        if (!visibleRows.length) {
+          el.results.innerHTML = "<p class=\"hint\" style=\"padding: 18px;\">No riders match the current filters.</p>";
+          return;
+        }
+
+        const primary = visibleRows[Number(el.primary.value || 0)];
+        const selectedIndexes = [...el.compare.selectedOptions].map((node) => Number(node.value));
+        const comparisonRows = selectedIndexes.map((index) => visibleRows[index]).filter(Boolean);
+
+        if (!primary || !comparisonRows.length) {
+          el.results.innerHTML = "<p class=\"hint\" style=\"padding: 18px;\">Choose a primary rider and at least one rider to compare.</p>";
+          return;
+        }
+
+        const rows = [primary, ...comparisonRows];
+        const header = ["Rider", ...STAGES.map((stage) => stage.replace("Stage", "Stage ")), "Overall"];
+        const html = `
+          <table>
+            <thead>
+              <tr>${header.map((heading) => `<th>${heading}</th>`).join("")}</tr>
+            </thead>
+            <tbody>
+              ${rows.map((row, index) => renderRow(row, primary, index === 0)).join("")}
+            </tbody>
+          </table>
+        `;
+        el.results.innerHTML = html;
+      }
+
+      function renderRow(row, primary, isPrimary) {
+        const cells = STAGES.map((stage) => {
+          const seconds = row[`${stage}Seconds`];
+          const primarySeconds = primary[`${stage}Seconds`];
+          const delta = seconds == null || primarySeconds == null ? null : seconds - primarySeconds;
+          return renderTimeCell(row[stage], delta, primarySeconds, isPrimary);
+        });
+
+        const totalDelta = row.overallSeconds == null || primary.overallSeconds == null
+          ? null
+          : row.overallSeconds - primary.overallSeconds;
+        cells.push(renderTimeCell(row.total, totalDelta, primary.overallSeconds, isPrimary));
+
+        return `
+          <tr>
+            <td>
+              <span class="rider-name">${escapeHtml(row.name)} (${escapeHtml(row.bib)})</span>
+              <span class="rider-meta">${escapeHtml([row.category, row.city, row.club].filter(Boolean).join(" / "))}</span>
+            </td>
+            ${cells.join("")}
+          </tr>
+        `;
+      }
+
+      function renderTimeCell(time, delta, baseline, isPrimary) {
+        if (isPrimary) {
+          return `<td><span class="baseline">${escapeHtml(time || "n/a")}</span><span class="cell-delta">baseline</span></td>`;
+        }
+        const klass = delta <= 0 ? "delta-good" : "delta-bad";
+        return `<td>${escapeHtml(time || "n/a")}<span class="cell-delta ${klass}">${escapeHtml(formatDelta(delta, baseline))}</span></td>`;
+      }
+
+      el.reload.addEventListener("click", loadResults);
+      el.category.addEventListener("change", () => {
+        updateRiderOptions();
+        render();
+      });
+      el.search.addEventListener("input", () => {
+        updateRiderOptions();
+        render();
+      });
+      el.primary.addEventListener("change", () => {
+        updateCompareOptions();
+        render();
+      });
+      el.compare.addEventListener("change", () => {
+        limitComparisons();
+        render();
+      });
+      document.querySelectorAll('input[name="difference"]').forEach((node) => {
+        node.addEventListener("change", render);
+      });
+
+      loadResults();
+    </script>
+  </body>
+</html>

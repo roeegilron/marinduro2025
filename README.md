@@ -1,99 +1,59 @@
-# Race Results Comparison App
+# Marinduro Results Comparison
 
-This Streamlit app allows users to compare race results from a PDF file. Users can select a primary participant and compare their performance against other participants across multiple stages. The app provides both time and percentage differences, with color-coded results for easy interpretation.
+This project compares Marinduro stage times rider-by-rider. The default app is now a static GitHub Pages page that loads the 2026 Pro and Expert results directly from Race Result, so visitors do not need to clone the repository or upload a PDF.
 
 ## Features
 
-- **PDF Parsing:** Extracts race results from a PDF file.
-- **Data Cleaning:** Cleans and structures the data for analysis.
-- **User Selection:** Allows selection of a primary user and up to 10 other users for comparison.
-- **Comparison Metrics:** Provides both time and percentage differences.
-- **Color-Coded Results:** Highlights better and worse performances with green and red colors, respectively.
-- **Overall Difference:** Displays an overall performance difference for each participant.
+- **Current-year results:** Loads the 2026 Marinduro Pro and Expert list from [Race Result](https://my.raceresult.com/395892/results#0_933E75).
+- **GitHub Pages ready:** `index.html` is a no-build JavaScript app that can be served directly from GitHub Pages.
+- **Rider comparison:** Select one primary rider and up to 10 comparison riders.
+- **Comparison metrics:** Toggle between time differences and percentage differences.
+- **Category and text filters:** Narrow the rider list by category, name, bib, city, or club.
+- **Streamlit fallback:** `app.py` can still load the 2026 web results or parse an uploaded PDF locally.
 
 ## How It Works
 
-1. **PDF Extraction:** The app uses `pdfplumber` to extract text from a PDF file containing race results.
-2. **Data Parsing:** A regular expression is used to parse the extracted text into a structured DataFrame.
-3. **Data Cleaning:** The app cleans the participant names and filters out any unwanted text.
-4. **User Interface:** Streamlit provides a user-friendly interface for selecting participants and viewing results.
-5. **Comparison Display:** The app calculates and displays stage-by-stage and overall differences in a table format.
+1. `index.html` fetches the 2026 Race Result config for event `395892`.
+2. It selects the `Online|Pro Race` list, whose Race Result list ID is `933E75`.
+3. It downloads the list JSON, normalizes rider rows, and computes stage and overall deltas in the browser.
+4. If the live request fails, the page falls back to the browser's cached copy or the bundled 2026 snapshot.
 
-## How to Deploy
+## Deploy On GitHub Pages
 
-### Prerequisites
+No build step is required.
 
-- Python 3.7 or higher
-- Streamlit
-- Pandas
-- pdfplumber
+1. Push the repository to GitHub.
+2. In the repository settings, open **Pages**.
+3. Set the source to the branch that contains `index.html`.
+4. Use the repository root as the Pages folder.
 
-### Installation
+GitHub Pages will serve `index.html` as the site homepage.
 
-1. **Clone the Repository:**
+## Run The Optional Streamlit App
 
-   ```bash
-   git clone https://github.com/yourusername/race-results-comparison.git
-   cd race-results-comparison
-   ```
+The Python app is useful for local debugging or comparing an uploaded PDF.
 
-2. **Install Dependencies:**
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-   Use `pip` to install the required packages:
+Open `http://localhost:8501` after Streamlit starts.
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Data Source
 
-   Ensure your `requirements.txt` includes:
-   ```
-   streamlit
-   pandas
-   pdfplumber
-   ```
+The current hard-coded source is the 2026 Marinduro Race Result page:
 
-3. **Run the App Locally:**
+```text
+https://my.raceresult.com/395892/results#0_933E75
+```
 
-   Start the Streamlit app by running:
+The static page uses the public Race Result JSON endpoints behind that widget. If a future event uses a new event ID or list ID, update the constants near the top of `index.html` and `app.py`.
 
-   ```bash
-   streamlit run app.py
-   ```
-
-   Open your web browser and go to `http://localhost:8501` to view the app.
-
-### Deployment
-
-To deploy the app, you can use Streamlit Cloud or any other hosting service that supports Python web applications.
-
-#### Deploying on Streamlit Cloud
-
-1. **Create a Streamlit Cloud Account:**
-
-   Sign up at [Streamlit Cloud](https://streamlit.io/cloud).
-
-2. **Connect Your GitHub Repository:**
-
-   Link your GitHub repository containing the app to Streamlit Cloud.
-
-3. **Deploy the App:**
-
-   Follow the instructions on Streamlit Cloud to deploy your app. You may need to specify the main file (`app.py`) and ensure all dependencies are listed in `requirements.txt`.
-
-4. **Access Your App:**
-
-   Once deployed, you will receive a URL to access your app online.
+`results-2026-pro-race.snapshot.json` is a bundled copy of the same 2026 Pro and Expert results. It lets the GitHub Pages site work off the bat even if Race Result is temporarily unavailable.
 
 ## Troubleshooting
 
-- **PDF Parsing Issues:** Ensure the PDF file is formatted consistently with the expected structure.
-- **Dependency Errors:** Verify that all required packages are installed and listed in `requirements.txt`.
-- **App Crashes:** Check the terminal for error messages and debug accordingly.
-
-## Contributing
-
-Contributions are welcome! Please fork the repository and submit a pull request with your changes.
-
-## License
-
-This project is licensed under the MIT License.
+- **Static page does not load live results:** Refresh the page and check that the Race Result page is still public.
+- **No riders appear after filtering:** Clear the text filter or switch the category back to `All categories`.
+- **PDF parsing issues in Streamlit:** Ensure the uploaded PDF follows the same result-table layout as the Race Result export.
