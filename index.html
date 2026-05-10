@@ -324,8 +324,124 @@
         padding: 3px 8px;
       }
 
+      .analysis-card {
+        margin-top: 22px;
+      }
+
+      .section-heading {
+        margin-bottom: 18px;
+      }
+
+      .section-heading h2 {
+        font-size: clamp(1.6rem, 3vw, 2.4rem);
+        letter-spacing: -0.04em;
+        margin: 0 0 6px;
+      }
+
+      .section-heading p {
+        color: var(--muted);
+        margin: 0;
+        max-width: 820px;
+      }
+
+      .insight-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-bottom: 20px;
+      }
+
+      .insight {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      .insight strong {
+        display: block;
+        font-size: 1.9rem;
+        letter-spacing: -0.04em;
+        line-height: 1.1;
+        margin-bottom: 6px;
+      }
+
+      .insight span {
+        color: var(--muted);
+      }
+
+      .analysis-grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .analysis-panel {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+      }
+
+      .analysis-panel h3 {
+        margin: 0 0 10px;
+      }
+
+      .chart-row {
+        align-items: center;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 92px 1fr 82px;
+        margin: 10px 0;
+      }
+
+      .bar-track {
+        background: #edf2f7;
+        border-radius: 999px;
+        height: 14px;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        background: var(--brand);
+        border-radius: inherit;
+        height: 100%;
+        min-width: 2px;
+      }
+
+      .analysis-list {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+      }
+
+      .analysis-list li {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        display: grid;
+        gap: 4px;
+        list-style: none;
+        padding: 11px 12px;
+      }
+
+      .analysis-list small {
+        color: var(--muted);
+      }
+
+      .analysis-note {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-top: 14px;
+      }
+
       @media (max-width: 860px) {
         .controls {
+          grid-template-columns: 1fr;
+        }
+
+        .insight-grid,
+        .analysis-grid {
           grid-template-columns: 1fr;
         }
 
@@ -424,6 +540,19 @@
       <section class="card table-card">
         <div class="table-wrap" id="results"></div>
       </section>
+
+      <section class="card analysis-card">
+        <div class="section-heading">
+          <h2>Race Story From The Numbers</h2>
+          <p>
+            A below-the-fold look at what the full 2026 field suggests about age,
+            stage importance, and riders who stood out relative to their category.
+          </p>
+        </div>
+        <div id="analysis">
+          <p class="hint">Analysis will appear after results load.</p>
+        </div>
+      </section>
     </main>
 
     <script>
@@ -456,6 +585,7 @@
         clearComparisons: document.querySelector("#clear-comparisons"),
         selectedComparisons: document.querySelector("#selected-comparisons"),
         results: document.querySelector("#results"),
+        analysis: document.querySelector("#analysis"),
         difference: () => document.querySelector('input[name="difference"]:checked').value,
       };
 
@@ -676,6 +806,7 @@
           el.status.innerHTML = `<strong>${allRows.length}</strong> riders loaded from <a href="${SOURCE_URL}">Race Result</a>.`;
           hydrateControls();
           render();
+          renderAnalysis();
         } catch (error) {
           const cached = getCachedRows();
           if (cached) {
@@ -684,6 +815,7 @@
             showError(`Live results could not be loaded (${error.message}). Showing the last cached copy from this browser.`);
             hydrateControls();
             render();
+            renderAnalysis();
           } else {
             await loadSnapshot(error);
           }
@@ -701,6 +833,7 @@
           showError(`Live results could not be loaded (${liveError.message}). Showing the bundled snapshot instead.`);
           hydrateControls();
           render();
+          renderAnalysis();
         } catch (snapshotError) {
           showError(`Could not load live results from Race Result (${liveError.message}) or the bundled snapshot (${snapshotError.message}).`);
           el.status.textContent = "Results failed to load.";
@@ -751,11 +884,9 @@
       function hydrateControls() {
         const categories = ["All categories", ...new Set(allRows.map((row) => row.category).sort())];
         el.category.replaceChildren(...categories.map((category) => option(category)));
-        el.primary.replaceChildren(...sortRows(allRows, "name").map((row) => option(riderLabel(row), row.id)));
         primaryId = primaryId && allRows.some((row) => row.id === primaryId)
           ? primaryId
           : allRows[0]?.id || "";
-        el.primary.value = primaryId;
         selectedComparisonIds = selectedComparisonIds.filter((id) => {
           return id !== primaryId && allRows.some((row) => row.id === id);
         });
@@ -795,6 +926,7 @@
 
       function updateBrowseOptions() {
         visibleRows = getFilteredRows();
+        updatePrimaryOptions();
 
         const options = visibleRows
           .filter((row) => row.id !== primaryId && !selectedComparisonIds.includes(row.id))
@@ -803,6 +935,15 @@
         el.compare.replaceChildren(...options);
         el.addComparisons.disabled = !allRows.length || selectedComparisonIds.length >= MAX_COMPARISONS;
         el.clearComparisons.disabled = !selectedComparisonIds.length;
+      }
+
+      function updatePrimaryOptions() {
+        const primaryStillVisible = visibleRows.some((row) => row.id === primaryId);
+        const primaryRows = primaryStillVisible
+          ? visibleRows
+          : [getRowById(primaryId), ...visibleRows].filter(Boolean);
+        el.primary.replaceChildren(...primaryRows.map((row) => option(riderLabel(row), row.id)));
+        el.primary.value = primaryId;
       }
 
       function addSelectedComparisons() {
@@ -925,6 +1066,211 @@
         }
         const klass = delta <= 0 ? "delta-good" : "delta-bad";
         return `<td>${escapeHtml(time || "n/a")}<span class="cell-delta ${klass}">${escapeHtml(formatDelta(delta, baseline))}</span></td>`;
+      }
+
+      function renderAnalysis() {
+        const rows = allRows.filter((row) => {
+          return Number.isFinite(row.overallSeconds) && Number.isFinite(Number(row.age));
+        });
+        if (rows.length < 8) {
+          el.analysis.innerHTML = "<p class=\"hint\">Not enough complete age and time data for field-wide analysis.</p>";
+          return;
+        }
+
+        const ageCorrelation = correlation(
+          rows.map((row) => Number(row.age)),
+          rows.map((row) => row.overallSeconds),
+        );
+        const stageImportance = computeStageImportance(rows);
+        const standoutRiders = computeStandoutRiders(rows);
+        const ageBuckets = computeAgeBuckets(rows);
+        const strongestStage = stageImportance[0];
+        const youngest = Math.min(...rows.map((row) => Number(row.age)));
+        const oldest = Math.max(...rows.map((row) => Number(row.age)));
+
+        el.analysis.innerHTML = `
+          <div class="insight-grid">
+            <div class="insight">
+              <strong>${formatCorrelation(ageCorrelation)}</strong>
+              <span>${describeCorrelation(ageCorrelation)} between rider age and total time across ${rows.length} riders.</span>
+            </div>
+            <div class="insight">
+              <strong>${strongestStage.stageLabel}</strong>
+              <span>Most predictive stage by correlation with overall time (${strongestStage.correlation.toFixed(2)}).</span>
+            </div>
+            <div class="insight">
+              <strong>${youngest}-${oldest}</strong>
+              <span>Age range in the loaded Pro and Expert field.</span>
+            </div>
+          </div>
+
+          <div class="analysis-grid">
+            <div class="analysis-panel">
+              <h3>Which Stages Shaped The Race?</h3>
+              ${renderStageImportance(stageImportance)}
+              <p class="analysis-note">Higher bars mean that stage time tracked more closely with total race time.</p>
+            </div>
+
+            <div class="analysis-panel">
+              <h3>Age Bands vs Average Pace</h3>
+              ${renderAgeBuckets(ageBuckets)}
+              <p class="analysis-note">Average total time by age band; lower times are faster.</p>
+            </div>
+
+            <div class="analysis-panel">
+              <h3>Category-Adjusted Standouts</h3>
+              <ul class="analysis-list">
+                ${standoutRiders.map((item) => `
+                  <li>
+                    <strong>${escapeHtml(item.row.name)} (${escapeHtml(item.row.bib)})</strong>
+                    <small>${escapeHtml(item.row.category)} / ${formatDuration(item.row.overallSeconds)} total / ${item.percentFaster.toFixed(1)}% faster than category average</small>
+                  </li>
+                `).join("")}
+              </ul>
+              <p class="analysis-note">This compares each rider to their own category average to avoid simply rediscovering the pro classes.</p>
+            </div>
+
+            <div class="analysis-panel">
+              <h3>What The Numbers Suggest</h3>
+              <ul class="analysis-list">
+                ${buildStoryBullets(ageCorrelation, stageImportance, standoutRiders).map((text) => `
+                  <li><span>${escapeHtml(text)}</span></li>
+                `).join("")}
+              </ul>
+            </div>
+          </div>
+        `;
+      }
+
+      function correlation(xs, ys) {
+        const pairs = xs.map((x, index) => [x, ys[index]]).filter(([x, y]) => {
+          return Number.isFinite(x) && Number.isFinite(y);
+        });
+        if (pairs.length < 3) return 0;
+
+        const meanX = average(pairs.map(([x]) => x));
+        const meanY = average(pairs.map(([, y]) => y));
+        let numerator = 0;
+        let denomX = 0;
+        let denomY = 0;
+        for (const [x, y] of pairs) {
+          const dx = x - meanX;
+          const dy = y - meanY;
+          numerator += dx * dy;
+          denomX += dx * dx;
+          denomY += dy * dy;
+        }
+        const denominator = Math.sqrt(denomX * denomY);
+        return denominator ? numerator / denominator : 0;
+      }
+
+      function average(values) {
+        return values.reduce((sum, value) => sum + value, 0) / values.length;
+      }
+
+      function computeStageImportance(rows) {
+        return STAGES.map((stage, index) => {
+          const stageRows = rows.filter((row) => Number.isFinite(row[`${stage}Seconds`]));
+          const value = correlation(
+            stageRows.map((row) => row[`${stage}Seconds`]),
+            stageRows.map((row) => row.overallSeconds),
+          );
+          return {
+            stage,
+            stageLabel: `Stage ${index + 1}`,
+            correlation: value,
+            strength: Math.abs(value),
+          };
+        }).sort((a, b) => b.strength - a.strength);
+      }
+
+      function computeAgeBuckets(rows) {
+        const buckets = [
+          { label: "Under 30", min: 0, max: 29 },
+          { label: "30-39", min: 30, max: 39 },
+          { label: "40-49", min: 40, max: 49 },
+          { label: "50+", min: 50, max: 120 },
+        ];
+        return buckets.map((bucket) => {
+          const bucketRows = rows.filter((row) => {
+            const age = Number(row.age);
+            return age >= bucket.min && age <= bucket.max;
+          });
+          return {
+            label: bucket.label,
+            count: bucketRows.length,
+            averageSeconds: bucketRows.length ? average(bucketRows.map((row) => row.overallSeconds)) : null,
+          };
+        }).filter((bucket) => bucket.count);
+      }
+
+      function computeStandoutRiders(rows) {
+        const categoryAverages = new Map();
+        for (const category of new Set(rows.map((row) => row.category))) {
+          const categoryRows = rows.filter((row) => row.category === category);
+          if (categoryRows.length >= 3) {
+            categoryAverages.set(category, average(categoryRows.map((row) => row.overallSeconds)));
+          }
+        }
+
+        return rows
+          .map((row) => {
+            const categoryAverage = categoryAverages.get(row.category);
+            if (!categoryAverage) return null;
+            return {
+              row,
+              percentFaster: (categoryAverage - row.overallSeconds) / categoryAverage * 100,
+            };
+          })
+          .filter(Boolean)
+          .filter((item) => item.percentFaster > 0)
+          .sort((a, b) => b.percentFaster - a.percentFaster)
+          .slice(0, 6);
+      }
+
+      function renderStageImportance(items) {
+        const max = Math.max(...items.map((item) => item.strength), 0.01);
+        return items.map((item) => `
+          <div class="chart-row">
+            <span>${item.stageLabel}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${item.strength / max * 100}%"></div></div>
+            <span>${item.correlation.toFixed(2)}</span>
+          </div>
+        `).join("");
+      }
+
+      function renderAgeBuckets(items) {
+        const slowest = Math.max(...items.map((item) => item.averageSeconds), 1);
+        return items.map((item) => `
+          <div class="chart-row">
+            <span>${escapeHtml(item.label)}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${item.averageSeconds / slowest * 100}%"></div></div>
+            <span>${formatDuration(item.averageSeconds)} (${item.count})</span>
+          </div>
+        `).join("");
+      }
+
+      function formatCorrelation(value) {
+        return `${value >= 0 ? "+" : ""}${value.toFixed(2)}`;
+      }
+
+      function describeCorrelation(value) {
+        const magnitude = Math.abs(value);
+        const direction = value >= 0 ? "older riders were generally slower" : "older riders were generally faster";
+        if (magnitude < 0.15) return "Little relationship";
+        if (magnitude < 0.35) return `Mild signal: ${direction}`;
+        return `Clear signal: ${direction}`;
+      }
+
+      function buildStoryBullets(ageCorrelation, stageImportance, standoutRiders) {
+        const topStages = stageImportance.slice(0, 2).map((item) => item.stageLabel).join(" and ");
+        const leader = standoutRiders[0]?.row;
+        return [
+          `${topStages} did the most to separate riders in the overall standings.`,
+          `${describeCorrelation(ageCorrelation)}; age explains only part of the spread, so category, skill, and stage execution still dominate.`,
+          leader ? `${leader.name} was the strongest category-adjusted standout by beating their category average by ${standoutRiders[0].percentFaster.toFixed(1)}%.` : "No category-adjusted standout could be computed from the loaded data.",
+          "Use the comparison table above to test these field-wide patterns against specific rider matchups.",
+        ];
       }
 
       el.reload.addEventListener("click", loadResults);
